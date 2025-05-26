@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雅阅 - 优雅文本阅读器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // 配置 Tailwind CSS
+    // This script must come AFTER the main Tailwind CDN script
+    tailwind.config = {
+      darkMode: 'class', // 启用 class 策略的暗黑模式
+      theme: {
+        extend: {
+          // 在这里可以添加自定义主题扩展
+        }
+      }
+    }
+  </script>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    /* Custom scrollbar for a more elegant look */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: #2d3748; /* 暗黑模式下的滚动条轨道颜色 */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #718096; /* 暗黑模式下的滚动条滑块颜色 */
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #a0aec0; /* 暗黑模式下的滚动条滑块悬停颜色 */
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0"
+  }
+}
+</script>
+</head>
+<body>
+  <noscript>您需要启用 JavaScript 来运行此应用。</noscript>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html><link rel="stylesheet" href="index.css">
+<script src="index.tsx" type="module"></script>
