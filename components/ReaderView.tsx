@@ -1,15 +1,24 @@
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { ReaderSettings } from '../types';
 import { LINE_HEIGHT_VALUES } from '../constants';
 
 interface ReaderViewProps {
   content: string | null;
   settings: ReaderSettings;
-  initialScrollTop: number | null; // For restoring scroll position
+  initialScrollTop: number | null;
   onScrollPositionChange: (scrollTop: number) => void;
-  onProgressChange: (progress: number) => void; // New prop to report progress
+  onProgressChange: (progress: number) => void;
 }
+
+interface TextChunk {
+  id: number;
+  text: string;
+  isLoaded: boolean;
+}
+
+const CHUNK_SIZE = 50; // 每个chunk的段落数
+const PRELOAD_OFFSET = 3; // 预加载的chunk数量
 
 // Helper to get the closest Tailwind font size class
 const getFontSizeClass = (sizeInPx: number): string => {
@@ -63,6 +72,112 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
 
 const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrollTop, onScrollPositionChange, onProgressChange }) => {
   const scrollableRef = useRef<HTMLDivElement>(null);
+
+  const [textChunks, setTextChunks] = useState<TextChunk[]>([]);
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastChunkRef = useRef<HTMLDivElement>(null);
+  const isInitialMount = useRef(true);
+
+  // 将文本分割成段落
+  const paragraphs = useMemo(() => {
+    if (!content) return [];
+    return content.split(/\n\s*\n|\n/).filter(p => p.trim().length > 0);
+  }, [content]);
+
+  // 将段落分块
+  const chunkedParagraphs = useMemo(() => {
+    const chunks: string[][] = [];
+    for (let i = 0; i < paragraphs.length; i += CHUNK_SIZE) {
+      chunks.push(paragraphs.slice(i, i + CHUNK_SIZE));
+    }
+    return chunks;
+  }, [paragraphs]);
+
+  // 初始化文本块
+  useEffect(() => {
+    if (chunkedParagraphs.length > 0) {
+      const initialChunks = chunkedParagraphs.map((_, index) => ({
+        id: index,
+        text: index === 0 ? chunkedParagraphs[0].join('\n\n') : '',
+        isLoaded: index === 0
+      }));
+      setTextChunks(initialChunks);
+    }
+  }, [chunkedParagraphs]);
+
+  // 加载指定chunk的内容
+  const loadChunk = useCallback((chunkIndex: number) => {
+    if (chunkIndex < 0 || chunkIndex >= chunkedParagraphs.length) return;
+    
+    setTextChunks(prevChunks => {
+      const newChunks = [...prevChunks];
+      if (!newChunks[chunkIndex]?.isLoaded) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, paragraphs.length);
+        const chunkText = paragraphs.slice(start, end).join('\n\n');
+        newChunks[chunkIndex] = { 
+          id: chunkIndex, 
+          text: chunkText, 
+          isLoaded: true 
+        };
+      }
+      return newChunks;
+    });
+  }, [chunkedParagraphs, paragraphs]);
+
+  // 预加载附近的chunks
+  const preloadAdjacentChunks = useCallback((chunkIndex: number) => {
+    const start = Math.max(0, chunkIndex - PRELOAD_OFFSET);
+    const end = Math.min(chunkedParagraphs.length - 1, chunkIndex + PRELOAD_OFFSET);
+    
+    for (let i = start; i <= end; i++) {
+      if (!textChunks[i]?.isLoaded) {
+        loadChunk(i);
+      }
+    }
+  }, [chunkedParagraphs.length, loadChunk, textChunks]);
+
+  // 设置IntersectionObserver来检测可见区域
+  useEffect(() => {
+    const handleIntersect: IntersectionObserverCallback = (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const chunkIndex = parseInt(entry.target.getAttribute('data-chunk-index') || '0', 10);
+          preloadAdjacentChunks(chunkIndex);
+        }
+      });
+    };
+
+    observer.current = new IntersectionObserver(handleIntersect, {
+      root: scrollableRef.current,
+      rootMargin: '200px 0px',
+      threshold: 0.1
+    });
+
+    // 观察所有chunk
+    const observerInstance = observer.current;
+    const chunkElements = scrollableRef.current?.querySelectorAll('[data-chunk-index]');
+    chunkElements?.forEach(el => observerInstance.observe(el));
+
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [preloadAdjacentChunks, textChunks.length]);
+
+
+
+  // 初始加载
+  useEffect(() => {
+    if (isInitialMount.current && textChunks.length > 0) {
+      loadChunk(0);
+      if (initialScrollTop && scrollableRef.current) {
+        scrollableRef.current.scrollTop = initialScrollTop;
+      }
+      isInitialMount.current = false;
+    }
+  }, [initialScrollTop, loadChunk, textChunks.length]);
 
   const calculateAndSetProgress = useCallback(() => {
     if (scrollableRef.current) {
@@ -180,7 +295,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrol
   }, [content, settings.fontSize, settings.lineHeight, calculateAndSetProgress, onScrollPositionChange]);
 
 
-  if (content === null) {
+  if (content === null || textChunks.length === 0) {
     return null;
   }
 
@@ -198,25 +313,53 @@ const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrol
     viewTextClass = 'text-[#5b4636]';
   }
 
+    // 优化移动端滚动体验
+  const scrollableStyles: React.CSSProperties = {
+    WebkitOverflowScrolling: 'touch', // 启用iOS上的弹性滚动
+    touchAction: 'pan-y', // 优化触摸滚动
+    overscrollBehavior: 'contain', // 防止滚动链
+    overflowY: 'auto',
+    height: '100%',
+    width: '100%',
+    position: 'relative',
+    WebkitTapHighlightColor: 'transparent', // 移除点击高亮
+    backfaceVisibility: 'hidden', // 提升渲染性能
+    WebkitFontSmoothing: 'antialiased', // 字体抗锯齿
+    transform: 'translateZ(0)', // 触发硬件加速
+    willChange: 'scroll-position', // 提示浏览器优化滚动
+  };
+
   const readerViewStyles: React.CSSProperties = {
     contain: 'layout paint style',
     scrollBehavior: 'smooth' 
   };
 
   return (
-    <div 
+    <div
       ref={scrollableRef}
-      className={`w-full h-full overflow-y-auto overscroll-y-contain transition-all duration-300 ease-in-out ${paddingXClass} ${paddingYClass} relative ${viewBgClass} ${viewTextClass} focus:outline-none`}
-      style={readerViewStyles}
+      className={`${viewBgClass} ${viewTextClass} ${fontSizeClass} ${lineHeightClass} ${paddingXClass} ${paddingYClass} ${fontFamilyClass} transition-colors duration-200`}
+      style={{ ...readerViewStyles, ...scrollableStyles }}
       aria-label="阅读区域"
-      tabIndex={-1} 
+      tabIndex={-1}
     >
-      <pre
-        className={`whitespace-pre-wrap break-words ${fontFamilyClass} ${fontSizeClass} ${lineHeightClass}`}
-        aria-live="polite"
-      >
-        {content}
-      </pre>
+      <div className={`${fontFamilyClass} ${fontSizeClass} ${lineHeightClass}`}>
+        {textChunks.map((chunk, index) => (
+          <div 
+            key={chunk.id}
+            ref={index === textChunks.length - 1 ? lastChunkRef : null}
+            data-chunk-index={chunk.id}
+            className="mb-4 last:mb-0"
+          >
+            {chunk.isLoaded ? (
+              <div className="whitespace-pre-wrap break-words">
+                {chunk.text}
+              </div>
+            ) : (
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            )}
+          </div>
+        ))}
+      </div>
       {/* Progress indicator removed from here */}
     </div>
   );
