@@ -17,8 +17,8 @@ interface TextChunk {
   isLoaded: boolean;
 }
 
-const CHUNK_SIZE = 50; // 每个chunk的段落数
-const PRELOAD_OFFSET = 3; // 预加载的chunk数量
+const CHUNK_SIZE = 2000; // 每个chunk的段落数
+const PRELOAD_OFFSET = 10; // 预加载的chunk数量
 
 // Helper to get the closest Tailwind font size class
 const getFontSizeClass = (sizeInPx: number): string => {
@@ -60,14 +60,6 @@ const getPaddingClass = (axis: 'x' | 'y', paddingInPx: number): string => {
   return axis === 'x' ? `px-${safeUnit}` : `py-${safeUnit}`;
 };
 
-// Debounce function
-const debounce = (func: (...args: any[]) => void, delay: number) => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return function(this: any, ...args: any[]) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(this, args), delay);
-  };
-};
 
 
 const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrollTop, onScrollPositionChange, onProgressChange }) => {
@@ -137,32 +129,71 @@ const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrol
     }
   }, [chunkedParagraphs.length, loadChunk, textChunks]);
 
+  // 使用requestAnimationFrame优化滚动性能
+  const rafId = useRef<number|null>(null);
+  const isScrolling = useRef(false);
+
   // 设置IntersectionObserver来检测可见区域
   useEffect(() => {
+    let observerInstance: IntersectionObserver | null = null;
+    
     const handleIntersect: IntersectionObserverCallback = (entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const chunkIndex = parseInt(entry.target.getAttribute('data-chunk-index') || '0', 10);
-          preloadAdjacentChunks(chunkIndex);
-        }
+      if (isScrolling.current) return;
+      
+      // 使用requestAnimationFrame批量处理
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+      }
+      
+      rafId.current = requestAnimationFrame(() => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const chunkIndex = parseInt(entry.target.getAttribute('data-chunk-index') || '0', 10);
+            preloadAdjacentChunks(chunkIndex);
+          }
+        });
       });
     };
 
-    observer.current = new IntersectionObserver(handleIntersect, {
+    // 使用更高效的观察器配置
+    const options: IntersectionObserverInit = {
       root: scrollableRef.current,
-      rootMargin: '200px 0px',
-      threshold: 0.1
-    });
+      rootMargin: '300px 0px', // 增加预加载区域
+      threshold: 0.01 // 降低阈值以提高响应速度
+    };
+
+    observerInstance = new IntersectionObserver(handleIntersect, options);
+    observer.current = observerInstance;
 
     // 观察所有chunk
-    const observerInstance = observer.current;
     const chunkElements = scrollableRef.current?.querySelectorAll('[data-chunk-index]');
-    chunkElements?.forEach(el => observerInstance.observe(el));
+    chunkElements?.forEach(el => observerInstance?.observe(el));
+
+    // 添加触摸事件监听器来优化移动端滚动
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      isScrolling.current = true;
+    };
+    
+    const handleTouchEnd = () => {
+      isScrolling.current = false;
+    };
+    
+    const element = scrollableRef.current;
+    element?.addEventListener('touchstart', handleTouchStart, { passive: true });
+    element?.addEventListener('touchend', handleTouchEnd, { passive: true });
+    element?.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      if (observer.current) {
-        observer.current.disconnect();
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
       }
+      if (observerInstance) {
+        observerInstance.disconnect();
+      }
+      element?.removeEventListener('touchstart', handleTouchStart);
+      element?.removeEventListener('touchend', handleTouchEnd);
+      element?.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [preloadAdjacentChunks, textChunks.length]);
 
@@ -202,7 +233,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrol
     }
   }, [calculateAndSetProgress, onScrollPositionChange, onProgressChange]); // Added onProgressChange for completeness, though calculateAndSetProgress has it
 
-  const debouncedScrollHandler = useRef(debounce(handleScroll, 250)).current;
+  // 直接使用handleScroll，无需debounce
+// const debouncedScrollHandler = useRef(debounce(handleScroll, 250)).current;
 
   useEffect(() => {
     const element = scrollableRef.current;
@@ -219,12 +251,12 @@ const ReaderView: React.FC<ReaderViewProps> = ({ content, settings, initialScrol
         calculateAndSetProgress();
       }
       
-      element.addEventListener('scroll', debouncedScrollHandler, { passive: true });
+      element.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
-        element.removeEventListener('scroll', debouncedScrollHandler);
+        element.removeEventListener('scroll', handleScroll);
       };
     }
-  }, [content, initialScrollTop, debouncedScrollHandler, calculateAndSetProgress]);
+  }, [content, initialScrollTop, handleScroll, calculateAndSetProgress]);
   
    useEffect(() => {
     const timer = setTimeout(() => {
