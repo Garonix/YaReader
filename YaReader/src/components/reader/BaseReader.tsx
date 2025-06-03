@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useSwipeable } from "react-swipeable";
 
 export interface BaseReaderProps {
@@ -8,6 +8,16 @@ export interface BaseReaderProps {
   initialLocation?: string | number;
   onLocationChange?: (location: string | number) => void;
   onReady?: () => void;
+  children?: ReactNode;
+  // 添加PdfReader中使用的属性
+  bookId?: string;
+  title?: string;
+  format?: any;
+  initialProgress?: number;
+  currentPage?: number;
+  totalPages?: number;
+  chapterTitle?: string;
+  onPageChange?: (page: number) => void;
 }
 
 export default function BaseReader({
@@ -15,6 +25,13 @@ export default function BaseReader({
   initialLocation,
   onLocationChange,
   onReady,
+  children,
+  bookId,
+  title,
+  currentPage = 1,
+  totalPages = 1,
+  chapterTitle,
+  onPageChange,
 }: BaseReaderProps) {
   const [isReady, setIsReady] = useState(false);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
@@ -65,10 +82,14 @@ export default function BaseReader({
         onClick={handleContentClick}
         {...swipeHandlers}
       >
-        {/* 默认的内容展示 */}
-        <div className="flex items-center justify-center h-full">
-          <p>请在子类中实现具体的内容渲染</p>
-        </div>
+        {/* 如果有子元素则显示子元素，否则显示默认内容 */}
+        {children ? (
+          children
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p>请在子类中实现具体的内容渲染</p>
+          </div>
+        )}
       </div>
       
       {/* 顶部工具栏 */}
@@ -98,7 +119,7 @@ export default function BaseReader({
       <div className={`toolbar fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800 safe-area-bottom ${isToolbarVisible ? '' : 'hidden'}`}>
         <div className="flex items-center justify-between p-4">
           <div className="text-sm">
-            <span>第1页 / 共100页</span>
+            <span>{chapterTitle || `第${currentPage}页 / 共${totalPages}页`}</span>
           </div>
           <div className="flex space-x-4">
             <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">

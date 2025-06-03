@@ -1,28 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useSwipeable } from "react-swipeable";
 import BaseReader, { BaseReaderProps } from "@/components/reader/BaseReader";
 
 interface TxtReaderProps extends Omit<BaseReaderProps, 'content'> {
   content?: string;
-  fontSize?: number;
-  lineHeight?: number;
-  pageCount?: number;
-  currentPage?: number;
 }
 
 export default function TxtReader({
   content = "",
-  fontSize = 16,
-  lineHeight = 1.5,
   initialLocation = 0,
-  pageCount,
-  currentPage,
   onLocationChange,
   onReady,
 }: TxtReaderProps) {
   const [pages, setPages] = useState<string[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(typeof initialLocation === 'number' ? initialLocation : 0);
+  const [fontSize, setFontSize] = useState(16);
+  const [lineHeight, setLineHeight] = useState(1.5);
   const containerRef = useRef<HTMLDivElement>(null);
   
   // 文本分页处理
@@ -31,7 +26,7 @@ export default function TxtReader({
     
     const paginateText = () => {
       const container = containerRef.current;
-      if (!container) return;
+      if (!container) return [];
       
       const testDiv = document.createElement('div');
       testDiv.style.position = 'absolute';
@@ -82,27 +77,35 @@ export default function TxtReader({
   }, [content, fontSize, lineHeight, onReady]);
   
   // 处理页面切换
-  const goToPage = (pageIndex: number) => {
+  const goToPage = useCallback((pageIndex: number) => {
     if (pageIndex >= 0 && pageIndex < pages.length) {
       setCurrentPageIndex(pageIndex);
       if (onLocationChange) {
         onLocationChange(pageIndex);
       }
     }
-  };
+  }, [pages.length, onLocationChange]);
   
   // 处理下一页
-  const goToNextPage = () => {
+  const goToNextPage = useCallback(() => {
     goToPage(currentPageIndex + 1);
-  };
+  }, [currentPageIndex, goToPage]);
   
   // 处理上一页
-  const goToPrevPage = () => {
+  const goToPrevPage = useCallback(() => {
     goToPage(currentPageIndex - 1);
-  };
+  }, [currentPageIndex, goToPage]);
+  
+  // 滑动手势处理
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: goToNextPage,
+    onSwipedRight: goToPrevPage,
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: true
+  });
   
   return (
-    <div className="h-full relative">
+    <div className="h-full relative" {...swipeHandlers}>
       <div 
         ref={containerRef}
         className="h-full p-4 overflow-hidden"

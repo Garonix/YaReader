@@ -1,0 +1,16 @@
+{
+  "indexing": {
+    "exclude": [
+      "node_modules/**",
+      ".next/**",
+      ".git/**",
+      "**/*.lock",
+      "**/*.log",
+      "**/*.min.js",
+      "**/*.min.css",
+      "dist/**",
+      "build/**",
+      "public/icons/**"
+    ]
+  }
+} 

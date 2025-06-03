@@ -1,1 +1,6 @@
 docs/
+node_modules/
+.cursor/
+.cursor-index/
+.vscode/
+.next/

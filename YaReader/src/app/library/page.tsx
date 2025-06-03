@@ -1,11 +1,21 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
-import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  format: string;
+  cover: string | null;
+  lastRead: string;
+  progress: number;
+}
+
 // 模拟书籍数据
-const mockBooks = [
+const mockBooks: Book[] = [
   {
     id: "1",
     title: "三体",
@@ -36,7 +46,7 @@ const mockBooks = [
 ];
 
 export default function LibraryPage() {
-  const [books, setBooks] = useState(mockBooks);
+  const [books, setBooks] = useState<Book[]>(mockBooks);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
   return (
@@ -98,7 +108,7 @@ export default function LibraryPage() {
                   
                   <div className="mt-2 h-1 w-full bg-gray-200 dark:bg-gray-700 rounded">
                     <div
-                      className="h-full bg-primary-600 rounded"
+                      className="h-full bg-blue-600 rounded"
                       style={{ width: `${book.progress * 100}%` }}
                     ></div>
                   </div>
@@ -114,15 +124,15 @@ export default function LibraryPage() {
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               你的书库中还没有书籍
             </p>
-            <Button asChild>
-              <Link href="/import">添加图书</Link>
+            <Button href="/import">
+              添加图书
             </Button>
           </div>
         )}
       </main>
       
       <div className="fixed right-6 bottom-6">
-        <Button size="lg" className="rounded-full h-14 w-14 shadow-lg">
+        <Button href="/import" size="lg" className="rounded-full h-14 w-14 shadow-lg flex items-center justify-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>

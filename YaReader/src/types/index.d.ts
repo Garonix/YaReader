@@ -86,4 +86,66 @@ declare module "next/font/google" {
     style: React.CSSProperties;
     variable: string;
   };
+}
+
+declare module "react-swipeable" {
+  export interface SwipeableHandlers {
+    onTouchStart: React.TouchEventHandler;
+    onTouchMove: React.TouchEventHandler;
+    onTouchEnd: React.TouchEventHandler;
+    onMouseDown: React.MouseEventHandler;
+    onClick?: React.MouseEventHandler;
+  }
+
+  export interface SwipeableOptions {
+    delta?: number;
+    preventDefaultTouchmoveEvent?: boolean;
+    trackMouse?: boolean;
+    trackTouch?: boolean;
+    rotationAngle?: number;
+    swipeDuration?: number;
+    onSwipedLeft?: (eventData: {
+      dir: string;
+      deltaX: number;
+      deltaY: number;
+      event: TouchEvent | MouseEvent;
+    }) => void;
+    onSwipedRight?: (eventData: {
+      dir: string;
+      deltaX: number;
+      deltaY: number;
+      event: TouchEvent | MouseEvent;
+    }) => void;
+    onSwipedUp?: (eventData: {
+      dir: string;
+      deltaX: number;
+      deltaY: number;
+      event: TouchEvent | MouseEvent;
+    }) => void;
+    onSwipedDown?: (eventData: {
+      dir: string;
+      deltaX: number;
+      deltaY: number;
+      event: TouchEvent | MouseEvent;
+    }) => void;
+    onSwiping?: (eventData: {
+      dir: string;
+      deltaX: number;
+      deltaY: number;
+      event: TouchEvent | MouseEvent;
+    }) => void;
+    onSwiped?: (eventData: {
+      dir: string;
+      deltaX: number;
+      deltaY: number;
+      event: TouchEvent | MouseEvent;
+    }) => void;
+  }
+
+  export function useSwipeable(options: SwipeableOptions): SwipeableHandlers;
+}
+
+declare module "epubjs" {
+  const ePub: (bookPath: string | ArrayBuffer, options?: any) => any;
+  export default ePub;
 } 

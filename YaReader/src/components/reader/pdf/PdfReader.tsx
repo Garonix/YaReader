@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { BaseReader } from "../BaseReader";
+import BaseReader from "../BaseReader";
 import { BookFormat } from "@/types/book";
 
 // PDF.js需要客户端导入

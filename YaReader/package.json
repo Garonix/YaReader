@@ -12,25 +12,30 @@
   "dependencies": {
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
+    "@radix-ui/react-slot": "^1.0.2",
     "@tailwindcss/typography": "^0.5.10",
     "axios": "^1.6.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
     "dexie": "^3.2.4",
-    "epub.js": "^0.3.88",
+    "epubjs": "^0.3.93",
     "framer-motion": "^10.16.5",
     "jszip": "^3.10.1",
     "localforage": "^1.10.0",
-    "next": "14.0.3",
+    "next": "^15.3.3",
     "next-pwa": "^5.6.0",
-    "pdfjs-dist": "^3.4.120",
+    "next-themes": "^0.2.1",
+    "pdfjs-dist": "^5.2.133",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.1",
     "react-query": "^3.39.3",
-    "react-swipeable": "^7.0.1",
+    "react-swipeable": "^7.0.2",
     "react-virtualized": "^9.22.5",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "swr": "^2.2.4",
+    "tailwind-merge": "^2.0.0",
     "zustand": "^4.4.6"
   },
   "devDependencies": {
@@ -39,6 +44,7 @@
     "@types/node": "^20.9.4",
     "@types/react": "^18.2.38",
     "@types/react-dom": "^18.2.17",
+    "@types/react-swipeable": "^5.2.0",
     "autoprefixer": "^10.4.16",
     "cypress": "^13.5.1",
     "eslint": "^8.54.0",
@@ -52,4 +58,4 @@
     "tailwindcss": "^3.3.5",
     "typescript": "^5.3.2"
   }
-} 
+}
